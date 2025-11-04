@@ -1,0 +1,66 @@
+# OpenEvolve config — exploration (bigger rewrites) for raw SQL
+
+max_iterations: 60
+checkpoint_interval: 10
+random_seed: 42
+max_code_length: 100000
+
+early_stopping_patience: 10
+early_stopping_metric: "combined_score"
+
+llm:
+  models:
+    - name: "gpt-5-low"
+      api_base: "http://localhost:8317/v1"
+      api_key: "your-api-key-1"
+      weight: 0.9
+    - name: "gpt-5-high"
+      api_base: "http://localhost:8317/v1"
+      api_key: "your-api-key-1"
+      weight: 0.1
+  temperature: 0.6
+  timeout: 1200
+
+database:
+  population_size: 6
+  num_islands: 1
+
+evaluator:
+  parallel_evaluations: 1
+  cascade_evaluation: false
+
+mutation:
+  mode: patch
+  max_patch_bytes: 50000
+  allow_files:
+    - query.sql
+
+guards:
+  - name: timeout_ok
+    condition: metrics.timeouts == 0
+
+objective:
+  primary: metrics.combined_score
+  secondary:
+    - -metrics.shared_read_total
+    - -metrics.total_cost_total
+    - -metrics.temp_read_total
+    - -metrics.rows_removed_total
+
+env:
+  EVAL_TIMEOUT: "60"
+
+prompt:
+  include_artifacts: true
+  max_artifact_bytes: 200480
+  system_message: |
+    Tryb EXPLORATION: możesz wprowadzać większe przebudowy (CTE, LATERAL,
+    DISTINCT ON, zmiany kolejności JOIN), ale MUSISZ zachować identyczny
+    rezultat i kolejność względem wejściowego SQL (projekcja, LIMIT/OFFSET).
+    Celuj w redukcję Shared Read/Cost/Temp I/O/Rows Removed. Unikaj funkcji
+    na kolumnach w WHERE; preferuj plany index‑friendly.
+  evaluator_system_message: |
+    Odrzucaj zmiany naruszające projekcję/paginację. Preferuj przebudowy
+    eliminujące Seq Scan hotspots, duże sorty/hash, powtarzane podzapytania;
+    rekomenduj EXISTS/DISTINCT ON/LATERAL tam gdzie pasuje.
+*** End Patch ***!

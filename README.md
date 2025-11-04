@@ -68,6 +68,7 @@ Full reproducibility, extensive evaluation pipelines, and scientific rigor built
 | **Mathematical** | State-of-the-art circle packing (n=26) | [Circle Packing](examples/circle_packing/) |
 | **Algorithm Design** | Adaptive sorting algorithms | [Rust Adaptive Sort](examples/rust_adaptive_sort/) |
 | **Scientific Computing** | Automated filter design | [Signal Processing](examples/signal_processing/) |
+| **Database/SQL** | PostgreSQL query optimization with EXPLAIN-driven evolution | [SQL Query Opt](examples/sql_query_opt/) |
 | **Multi-Language** | Python, Rust, R, Metal shaders | [All Examples](examples/) |
 
 </div>
@@ -89,6 +90,13 @@ python openevolve-run.py examples/function_minimization/initial_program.py \
   examples/function_minimization/evaluator.py \
   --config examples/function_minimization/config.yaml \
   --iterations 50
+```
+
+Or optimize a PostgreSQL query (works with plain `.sql` files too):
+```bash
+# Fast evaluator (subset of scenarios); see examples/sql_query_opt/README.md
+cd examples/sql_query_opt
+EVAL_MODE=fast python ../../openevolve-run.py initial.sql evaluator.py --config config.yaml --iterations 10
 ```
 
 **Note:** The example config uses Gemini by default, but you can use any OpenAI-compatible provider by modifying the `config.yaml`. See the [configs](configs/) for full configuration options.
@@ -317,6 +325,38 @@ llm:
 ```bash
 export OPENAI_API_KEY="your-gemini-api-key"
 ```
+
+</details>
+
+<details>
+<summary><b>🔀 Custom Base URL (Python)</b></summary>
+
+Use either OpenEvolve config or the Python SDK directly.
+
+```yaml
+# config.yaml (preferred)
+llm:
+  api_base: "https://your-proxy-or-endpoint.example.com/v1"
+  model: "gpt-4o-mini"
+```
+
+```python
+# Direct Python usage (for quick tests)
+from openai import OpenAI
+
+client = OpenAI(
+    api_key=os.environ.get("OPENAI_API_KEY"),
+    base_url="https://your-proxy-or-endpoint.example.com/v1",
+)
+
+resp = client.chat.completions.create(
+    model="gpt-4o-mini",
+    messages=[{"role": "user", "content": "Hello"}],
+)
+print(resp.choices[0].message.content)
+```
+
+In OpenEvolve, `llm.api_base` is passed to the OpenAI Python client as `base_url`, so you can target regional OpenAI hosts (e.g., `https://eu.api.openai.com/v1`) or compatible proxies (Ollama, vLLM, OptiLLM).
 
 </details>
 

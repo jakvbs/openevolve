@@ -39,6 +39,10 @@ ENV/
 # Output files
 examples/*/output/
 openevolve_output*/
+examples/sql_query_opt/artifacts/
+examples/sql_query_opt/openevolve_output*/
+examples/sql_query_opt/**/run.log
+examples/sql_query_opt/**/pid
 *.log
 
 # Test cache

@@ -1,0 +1,66 @@
+# OpenEvolve config — refinement (small patches) for raw SQL
+
+max_iterations: 60
+checkpoint_interval: 1
+random_seed: 42
+max_code_length: 100000
+
+early_stopping_patience: 10
+early_stopping_metric: "combined_score"
+
+llm:
+  models:
+    - name: "gpt-5-low"
+      api_base: "http://localhost:8317/v1"
+      api_key: "your-api-key-1"
+      weight: 0.8
+    - name: "gpt-5-high"
+      api_base: "http://localhost:8317/v1"
+      api_key: "your-api-key-1"
+      weight: 0.2
+  temperature: 0.5
+  timeout: 1200
+
+database:
+  population_size: 6
+  num_islands: 1
+
+evaluator:
+  parallel_evaluations: 1
+  cascade_evaluation: false
+
+mutation:
+  mode: patch
+  max_patch_bytes: 2048
+  allow_files:
+    - query.sql
+
+guards:
+  - name: timeout_ok
+    condition: metrics.timeouts == 0
+
+objective:
+  primary: metrics.combined_score
+  secondary:
+    - -metrics.shared_read_total
+    - -metrics.total_cost_total
+    - -metrics.temp_read_total
+    - -metrics.rows_removed_total
+
+env:
+  EVAL_TIMEOUT: "60"
+
+prompt:
+  include_artifacts: true
+  max_artifact_bytes: 200480
+  system_message: |
+    Jesteś ekspertem od wydajności PostgreSQL. Otrzymujesz pojedyncze zapytanie
+    SQL (wszystkie wartości już wstawione). Twoim zadaniem jest zaproponować
+    minimalne, bezpieczne poprawki zwiększające wydajność bez zmiany semantyki
+    (projekcja kolumn, kolejność wierszy, limity/paginacja muszą zostać takie
+    same). Priorytety metryk: Shared Read ↓, Total Cost ↓, Temp I/O ↓,
+    Rows Removed ↓; preferuj Index/Bitmap/Index Only nad Seq Scan.
+  evaluator_system_message: |
+    Recenzuj propozycję pod kątem ryzyka: odrzuć jeśli psuje paginację,
+    kolejność lub projekcję. Faworyzuj sargowalne filtry, EXISTS nad LEFT JOIN+filter,
+    DISTINCT ON/LATERAL do „najnowszych” rekordów, eliminuj zbędne sorty.
